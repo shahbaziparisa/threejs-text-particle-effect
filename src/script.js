@@ -450,7 +450,6 @@ scene.add(backgroundMesh)
 let backgroundMatcapMaterial = null
 const backgroundMaterials = {
     'Gradient': backgroundShaderMaterial,
-    'Animated Noise': bgMaterial,
     'Matcap': null
 }
 
@@ -701,8 +700,8 @@ renderer.setClearColor(0x000000)
  */
 // Particles folder
 const particlesFolder = gui.addFolder('Particles')
-particlesFolder.add(particleConfig, 'count').min(50).max(500).step(10).disable()
-particlesFolder.add(particleConfig, 'size').min(0.01).max(0.1).step(0.01).disable()
+particlesFolder.add(particleConfig, 'count').min(50).max(500).step(10)
+particlesFolder.add(particleConfig, 'size').min(0.01).max(0.1).step(0.01)
 
 // Geometry folder
 const geometryFolder = gui.addFolder('Geometry')
@@ -716,20 +715,11 @@ geometryFolder.add({ regenerate: () => {
 
 // Background folder
 const backgroundFolder = gui.addFolder('Background')
-const backgroundConfig = { type: 'Animated Noise' }
-backgroundFolder.add(backgroundConfig, 'type', ['Gradient', 'Animated Noise', 'Matcap']).onChange((value) => {
+const backgroundConfig = { type: 'Gradient' }
+backgroundFolder.add(backgroundConfig, 'type', ['Gradient', 'Matcap']).onChange((value) => {
     backgroundMesh.material = backgroundMaterials[value]
 })
 
-// Camera folder
-const cameraFolder = gui.addFolder('Camera')
-cameraFolder.add(controls, 'autoRotateSpeed').min(0.1).max(2).step(0.1)
-cameraFolder.add(controls, 'dampingFactor').min(0.01).max(0.2).step(0.01)
-
-const idleConfig = { threshold: idleThreshold }
-cameraFolder.add(idleConfig, 'threshold', 1, 10, 0.5).onChange((value) => {
-    idleThreshold = value
-})
 
 // Visual folder - Matcap selector for text and objects
 const visualFolder = gui.addFolder('Visual')
