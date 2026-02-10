@@ -124,7 +124,7 @@ const backgroundShaderMaterial = new THREE.ShaderMaterial({
         color1: { value: new THREE.Color(0x1B262C) }, 
         color2: { value: new THREE.Color(0x3282B8) }, 
         color3: { value: new THREE.Color(0x45B7D1) }, 
-        color4: { value: new THREE.Color(0xBBE1FA) }, 
+        color4: { value: new THREE.Color(0x139efb) }, 
         color5: { value: new THREE.Color(0xFFD166) }  
     },
     vertexShader: `
@@ -561,6 +561,7 @@ controls.autoRotate = false
 controls.autoRotateSpeed = 0.5
 controls.enableZoom = true
 controls.enablePan = false
+controls.maxDistance = 15
 
 // Idle detection
 let idleTimer = 0
