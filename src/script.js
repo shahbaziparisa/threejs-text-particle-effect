@@ -349,97 +349,6 @@ const backgroundShaderMaterial = new THREE.ShaderMaterial({
 
 
 
-
-/**
- * Animated Noise Background Shader
- */
-const bgMaterial = new THREE.ShaderMaterial({
-    uniforms: {
-        time: { value: 0.0 },
-        colorA: { value: new THREE.Color(0x8A2BE2) }, // Purple
-        colorB: { value: new THREE.Color(0x00CED1) }, // Turquoise
-        colorC: { value: new THREE.Color(0xFF6347) }, // Tomato Red
-        colorD: { value: new THREE.Color(0x32CD32) }  // Lime Green
-    },
-    vertexShader: `
-        varying vec2 vUv;
-        void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-    `,
-    fragmentShader: `
-        uniform float time;
-        uniform vec3 colorA;
-        uniform vec3 colorB;
-        uniform vec3 colorC;
-        uniform vec3 colorD;
-        varying vec2 vUv;
-
-        float random(vec2 st) {
-            return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
-        }
-
-        float noise(vec2 st) {
-            vec2 i = floor(st);
-            vec2 f = fract(st);
-
-            float a = random(i);
-            float b = random(i + vec2(1.0, 0.0));
-            float c = random(i + vec2(0.0, 1.0));
-            float d = random(i + vec2(1.0, 1.0));
-
-            vec2 u = f * f * (3.0 - 2.0 * f);
-
-            return mix(a, b, u.x) +
-                   (c - a) * u.y * (1.0 - u.x) +
-                   (d - b) * u.x * u.y;
-        }
-
-        float fbm(vec2 st) {
-            float value = 0.0;
-            float amplitude = 0.5;
-            float frequency = 1.0;
-
-            for (int i = 0; i < 5; i++) {
-                value += amplitude * noise(st * frequency);
-                amplitude *= 0.5;
-                frequency *= 2.0;
-            }
-
-            return value;
-        }
-
-        void main() {
-            vec2 uv = vUv * 2.0;
-            float t = time * 0.05;
-
-            // Create animated cloud patterns
-            float noise1 = fbm(uv + t);
-            float noise2 = fbm(uv * 1.5 - vec2(0.0, t * 0.7));
-            float noise3 = fbm(uv * 2.0 + vec2(t * 0.3, 0.0));
-
-            // Blend patterns
-            float pattern = (noise1 + noise2 * 0.5 + noise3 * 0.25) / 1.75;
-
-            // Color gradient based on pattern
-            vec3 color;
-            if (pattern < 0.25) {
-                color = mix(colorA, colorB, pattern * 4.0);
-            } else if (pattern < 0.5) {
-                color = mix(colorB, colorC, (pattern - 0.25) * 4.0);
-            } else if (pattern < 0.75) {
-                color = mix(colorC, colorD, (pattern - 0.5) * 4.0);
-            } else {
-                color = mix(colorD, colorA, (pattern - 0.75) * 4.0);
-            }
-
-            gl_FragColor = vec4(color, 1.0);
-        }
-    `,
-    side: THREE.DoubleSide
-})
-
 const backgroundGeometry = new THREE.SphereGeometry(200, 128, 128)
 const backgroundMesh = new THREE.Mesh(backgroundGeometry, backgroundShaderMaterial)
 scene.add(backgroundMesh)
@@ -557,7 +466,7 @@ function createRandomGeometry() {
             Math.random() * 2 - 1
         ).normalize(),
         phaseOffset: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.3
+        rotationSpeed: (Math.random() - 0.5) * 1.5
     }
 
     scene.add(mesh)
@@ -698,10 +607,6 @@ renderer.setClearColor(0x000000)
 /**
  * GUI Controls
  */
-// Particles folder
-const particlesFolder = gui.addFolder('Particles')
-particlesFolder.add(particleConfig, 'count').min(50).max(500).step(10)
-particlesFolder.add(particleConfig, 'size').min(0.01).max(0.1).step(0.01)
 
 // Geometry folder
 const geometryFolder = gui.addFolder('Geometry')
@@ -745,6 +650,31 @@ visualFolder.add(visualConfig, 'matcap', Object.keys(matcapOptions)).onChange((v
     })
 })
 
+// Shader Colors folder
+const colorsFolder = gui.addFolder('Shader Colors')
+const colorConfig = {
+    color1: '#' + backgroundShaderMaterial.uniforms.color1.value.getHexString(),
+    color2: '#' + backgroundShaderMaterial.uniforms.color2.value.getHexString(),
+    color3: '#' + backgroundShaderMaterial.uniforms.color3.value.getHexString(),
+    color4: '#' + backgroundShaderMaterial.uniforms.color4.value.getHexString(),
+    color5: '#' + backgroundShaderMaterial.uniforms.color5.value.getHexString()
+}
+colorsFolder.addColor(colorConfig, 'color1').onChange((value) => {
+    backgroundShaderMaterial.uniforms.color1.value.set(value)
+})
+colorsFolder.addColor(colorConfig, 'color2').onChange((value) => {
+    backgroundShaderMaterial.uniforms.color2.value.set(value)
+})
+colorsFolder.addColor(colorConfig, 'color3').onChange((value) => {
+    backgroundShaderMaterial.uniforms.color3.value.set(value)
+})
+colorsFolder.addColor(colorConfig, 'color4').onChange((value) => {
+    backgroundShaderMaterial.uniforms.color4.value.set(value)
+})
+colorsFolder.addColor(colorConfig, 'color5').onChange((value) => {
+    backgroundShaderMaterial.uniforms.color5.value.set(value)
+})
+
 /**
  * Animate
  */
@@ -767,10 +697,10 @@ function animateObjects(elapsedTime) {
         obj.position.y = originalPosition.y + moveY
         obj.position.z = originalPosition.z + moveZ
 
-        // Smooth, slow rotation
-        obj.rotation.x += rotationSpeed * 0.01
-        obj.rotation.y += rotationSpeed * 0.015
-        obj.rotation.z += rotationSpeed * 0.008
+        // Faster, more dynamic rotation
+        obj.rotation.x += rotationSpeed * 0.04
+        obj.rotation.y += rotationSpeed * 0.06
+        obj.rotation.z += rotationSpeed * 0.03
     })
 }
 let time = 0;
