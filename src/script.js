@@ -353,6 +353,147 @@ const backgroundGeometry = new THREE.SphereGeometry(200, 128, 128)
 const backgroundMesh = new THREE.Mesh(backgroundGeometry, backgroundShaderMaterial)
 scene.add(backgroundMesh)
 
+/**
+ * Text Liquid Gradient Shader Material
+ */
+function createTextShaderMaterial() {
+    return new THREE.ShaderMaterial({
+        uniforms: {
+            time: { value: 0.0 },
+            speed: { value: 1.0 },
+            flowSpeed: { value: 1.5 },
+            distortion: { value: 0.3 },
+            textColor1: { value: new THREE.Color(0x260d54) }, // Bright Red/Pink
+            textColor2: { value: new THREE.Color(0xffffff) }, // Bright Yellow/Gold
+            textColor3: { value: new THREE.Color(0x8e66f9) }  // Bright Cyan
+        },
+        vertexShader: `
+            varying vec3 vPosition;
+            varying vec3 vNormal;
+            varying vec2 vUv;
+            
+            void main() {
+                vPosition = position;
+                vNormal = normalize(normal);
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `,
+        fragmentShader: `
+            uniform float time;
+            uniform float speed;
+            uniform float flowSpeed;
+            uniform float distortion;
+            uniform vec3 textColor1;
+            uniform vec3 textColor2;
+            uniform vec3 textColor3;
+            
+            varying vec3 vPosition;
+            varying vec3 vNormal;
+            varying vec2 vUv;
+            
+            // Hash function for noise
+            float hash(float n) { 
+                return fract(sin(n) * 43758.5453123); 
+            }
+            
+            float hash(vec3 p) { 
+                return hash(dot(p, vec3(127.1, 311.7, 74.7))); 
+            }
+            
+            // Perlin-like noise
+            float noise3D(vec3 p) {
+                vec3 i = floor(p);
+                vec3 f = fract(p);
+                vec3 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+                
+                float a = hash(i);
+                float b = hash(i + vec3(1.0, 0.0, 0.0));
+                float c = hash(i + vec3(0.0, 1.0, 0.0));
+                float d = hash(i + vec3(1.0, 1.0, 0.0));
+                float e = hash(i + vec3(0.0, 0.0, 1.0));
+                float f_val = hash(i + vec3(1.0, 0.0, 1.0));
+                float g = hash(i + vec3(0.0, 1.0, 1.0));
+                float h = hash(i + vec3(1.0, 1.0, 1.0));
+                
+                float k0 = a;
+                float k1 = b - a;
+                float k2 = c - a;
+                float k3 = e - a;
+                float k4 = a - b - c + d;
+                float k5 = a - c - e + g;
+                float k6 = a - b - e + f_val;
+                float k7 = -a + b + c - d + e - f_val - g + h;
+                
+                return k0 + k1*u.x + k2*u.y + k3*u.z + k4*u.x*u.y 
+                       + k5*u.y*u.z + k6*u.x*u.z + k7*u.x*u.y*u.z;
+            }
+            
+            void main() {
+                float t = time * speed;
+                
+                // Multiple directional liquid flows
+                vec2 flowUV = vUv;
+                
+                // Horizontal flow
+                float flow1 = sin(flowUV.x * 3.0 + t * flowSpeed * 0.8) * 0.5 + 0.5;
+                
+                // Vertical flow
+                float flow2 = sin(flowUV.y * 4.0 + t * flowSpeed * 1.2) * 0.5 + 0.5;
+                
+                // Diagonal flow
+                float flow3 = sin((flowUV.x + flowUV.y) * 5.0 + t * flowSpeed * 1.0) * 0.5 + 0.5;
+                
+                // Wavy distortion for liquid surface effect
+                vec3 pos = vPosition * 0.8;
+                pos.x += sin(pos.y * 2.0 + t * 0.5) * distortion;
+                pos.y += cos(pos.x * 2.5 + t * 0.6) * distortion;
+                pos.z += sin(pos.x * 1.5 + pos.y * 1.8 + t * 0.4) * distortion;
+                
+                // Noise-based liquid patterns
+                float noise1 = noise3D(pos + vec3(t * 0.2, 0.0, 0.0)) * 0.5 + 0.5;
+                float noise2 = noise3D(pos * 1.5 + vec3(0.0, t * 0.3, 0.0)) * 0.5 + 0.5;
+                float noise3 = noise3D(pos * 2.0 - vec3(t * 0.15, 0.0, 0.0)) * 0.5 + 0.5;
+                
+                // Combine flows and noise for liquid effect
+                float liquidPattern = (flow1 + flow2 * 0.7 + flow3 * 0.5) * 0.4 +
+                                    (noise1 + noise2 * 0.6 + noise3 * 0.4) * 0.6;
+                
+                // Create wavy ripples
+                float ripple = sin(liquidPattern * 10.0 + t * 2.0) * 0.1 + 0.9;
+                liquidPattern *= ripple;
+                
+                // Color blending zones with smooth transitions
+                float c1Weight = sin(liquidPattern * 3.14159) * 0.5 + 0.5;
+                float c2Weight = cos(liquidPattern * 3.14159 + 1.0) * 0.5 + 0.5;
+                float c3Weight = sin(liquidPattern * 3.14159 + 2.0) * 0.5 + 0.5;
+                
+                // Normalize weights
+                float totalWeight = c1Weight + c2Weight + c3Weight;
+                c1Weight /= totalWeight;
+                c2Weight /= totalWeight;
+                c3Weight /= totalWeight;
+                
+                // Mix colors for liquid paint effect
+                vec3 liquidColor = textColor1 * c1Weight +
+                                 textColor2 * c2Weight +
+                                 textColor3 * c3Weight;
+                
+                // Add shimmer/sparkle in transition zones
+                float shimmer = sin(liquidPattern * 20.0 + t * 3.0) * 0.05 + 1.0;
+                liquidColor *= shimmer;
+                
+                // Saturation boost for playful effect
+                float brightness = (liquidColor.r + liquidColor.g + liquidColor.b) / 3.0;
+                liquidColor = mix(liquidColor, vec3(brightness), -0.3);
+                
+                gl_FragColor = vec4(liquidColor, 1.0);
+            }
+        `
+    });
+}
+
+
 
 
 // Background matcap material (created after textures are loaded)
@@ -413,11 +554,72 @@ backgroundMatcapMaterial = new THREE.MeshMatcapMaterial({
 })
 backgroundMaterials['Matcap'] = backgroundMatcapMaterial
 
+
+/**
+ * Particle Textures
+ */
+const particleTextures = ['flame_04.png', 'flare_01.png', 'trace_01.png']  // Particle texture names
+const loadedParticleTextures = {}
+
+// Load particle textures with transparency
+particleTextures.forEach(texture => {
+    const loaded = textureLoader.load(`textures/particle/kenney_particle-pack/PNG (Transparent)/${texture}`)
+    loadedParticleTextures[texture] = loaded
+})
+
+// Function to create canvas texture as fallback
+function createFallbackTexture() {
+    const canvas = document.createElement('canvas')
+    canvas.width = 64
+    canvas.height = 64
+    const ctx = canvas.getContext('2d')
+    
+    // Draw a glowing circle
+    const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32)
+    gradient.addColorStop(0, 'rgba(255, 255, 255, 1)')
+    gradient.addColorStop(0.7, 'rgba(200, 150, 255, 0.5)')
+    gradient.addColorStop(1, 'rgba(150, 100, 255, 0)')
+    
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, 0, 64, 64)
+    
+    const texture = new THREE.CanvasTexture(canvas)
+    return texture
+}
+
+// Function to get random particle texture (with fallback)
+function getRandomParticleTexture() {
+    const textures = Object.values(loadedParticleTextures)
+    if (textures.length === 0) {
+        console.warn("No particle textures loaded. Using fallback texture.")
+        return createFallbackTexture()
+    }
+    return textures[Math.floor(Math.random() * textures.length)]
+}
+
+// Particle materials for each texture
+const particleMaterials = {}
+Object.entries(loadedParticleTextures).forEach(([textureName, texture]) => {
+    particleMaterials[textureName] = new THREE.PointsMaterial({
+        map: texture,
+        size: particleConfig.size,
+        transparent: true,
+        sizeAttenuation: true,
+        alphaMap: texture
+    })
+})
+
 /**
  * Fonts and Text Material
  */
 const fontLoader = new FontLoader()
 let textMaterial = null
+let textShaderMaterial = null
+let textMesh = null
+const textMaterials = {
+    'Matcap': null,
+    'Liquid Gradient': null
+}
 
 /**
  * Lighting
@@ -482,8 +684,11 @@ fontLoader.load(
     'fonts/helvetiker_regular.typeface.json',
     (font) =>
     {
-        // Material for text
+        // Material for text - Matcap version
         textMaterial = new THREE.MeshMatcapMaterial({ matcap: matcapTexture })
+        
+        // Create liquid gradient shader material
+        textShaderMaterial = createTextShaderMaterial()
 
         // Text
         const textGeometry = new TextGeometry(
@@ -502,21 +707,36 @@ fontLoader.load(
         )
         textGeometry.center()
 
-        const text = new THREE.Mesh(textGeometry, textMaterial)
-        scene.add(text)
+        // Create text mesh with Liquid Gradient as default
+        textMesh = new THREE.Mesh(textGeometry, textShaderMaterial)
+        scene.add(textMesh)
+        
+        // Store materials
+        textMaterials['Matcap'] = textMaterial
+        textMaterials['Liquid Gradient'] = textShaderMaterial
 
-        // Star Particles (simple, no interaction)
-        const sphereGeometry = new THREE.SphereGeometry(particleConfig.size, 8, 8)
-
+        // Textured Particles with random textures
         for(let i = 0; i < particleConfig.count; i++)
         {
-            const sphere = new THREE.Mesh(sphereGeometry, textMaterial)
-            sphere.position.x = (Math.random() - 0.5) * particleConfig.spread
-            sphere.position.y = (Math.random() - 0.5) * particleConfig.spread
-            sphere.position.z = (Math.random() - 0.5) * particleConfig.spread
+            // Get random particle texture
+            const randomTexture = getRandomParticleTexture()
+            
+            // Create sprite with random texture
+            const particleMaterial = new THREE.SpriteMaterial({ 
+                map: randomTexture,
+                transparent: true,
+                sizeAttenuation: true
+            })
+            const sprite = new THREE.Sprite(particleMaterial)
+            sprite.scale.set(1.5, 1.5, 1)
+            
+            // Random positions
+            sprite.position.x = (Math.random() - 0.5) * particleConfig.spread
+            sprite.position.y = (Math.random() - 0.5) * particleConfig.spread
+            sprite.position.z = (Math.random() - 0.5) * particleConfig.spread
 
-            scene.add(sphere)
-            particles.push(sphere)
+            scene.add(sprite)
+            particles.push(sprite)
         }
     }
 )
@@ -635,7 +855,7 @@ visualFolder.add(visualConfig, 'matcap', Object.keys(matcapOptions)).onChange((v
     const newMatcap = textureLoader.load(texturePath)
     newMatcap.colorSpace = THREE.SRGBColorSpace
 
-    // Update text and particle materials
+    // Update text material
     if (textMaterial) {
         textMaterial.matcap = newMatcap
     }
@@ -644,12 +864,102 @@ visualFolder.add(visualConfig, 'matcap', Object.keys(matcapOptions)).onChange((v
     animatedObjects.forEach(obj => {
         obj.material.matcap = newMatcap
     })
-
-    // Update all particles
-    particles.forEach(particle => {
-        particle.material.matcap = newMatcap
-    })
+    
+    // Note: Particles now use separate textured materials
 })
+// Text Settings folder
+const textSettingsFolder = gui.addFolder('Text Settings')
+const textConfig = { material: 'Liquid Gradient' }
+const materialController = textSettingsFolder.add(textConfig, 'material', ['Matcap', 'Liquid Gradient']).onChange((value) => {
+    if (textMesh) {
+        textMesh.material = textMaterials[value]
+    }
+    // Update visibility of liquid gradient controls
+    updateTextControlsVisibility(value)
+})
+
+// Create a reference object for text shader controls
+const textShaderConfig = {
+    speed: 1.0,
+    flowSpeed: 1.5,
+    distortion: 0.3
+}
+
+let speedController = null
+let flowSpeedController = null
+let distortionController = null
+let textGradientColorsFolder = null
+
+function updateTextControlsVisibility(materialType) {
+    if (materialType === 'Liquid Gradient') {
+        // Show liquid gradient controls if they exist
+        if (speedController) speedController.show()
+        if (flowSpeedController) flowSpeedController.show()
+        if (distortionController) distortionController.show()
+        
+        // Show color folder
+        if (textGradientColorsFolder) textGradientColorsFolder.show()
+    } else {
+        // Hide liquid gradient controls
+        if (speedController) speedController.hide()
+        if (flowSpeedController) flowSpeedController.hide()
+        if (distortionController) distortionController.hide()
+        
+        // Hide color folder
+        if (textGradientColorsFolder) textGradientColorsFolder.hide()
+    }
+}
+
+// Add speed control
+speedController = textSettingsFolder.add(textShaderConfig, 'speed', 0.1, 3.0, 0.1).onChange((value) => {
+    if (textShaderMaterial) {
+        textShaderMaterial.uniforms.speed.value = value
+    }
+})
+
+// Add flow speed control
+flowSpeedController = textSettingsFolder.add(textShaderConfig, 'flowSpeed', 0.5, 3.0, 0.1).onChange((value) => {
+    if (textShaderMaterial) {
+        textShaderMaterial.uniforms.flowSpeed.value = value
+    }
+})
+
+// Add distortion control
+distortionController = textSettingsFolder.add(textShaderConfig, 'distortion', 0.0, 1.0, 0.05).onChange((value) => {
+    if (textShaderMaterial) {
+        textShaderMaterial.uniforms.distortion.value = value
+    }
+})
+
+// Text Gradient Colors folder
+textGradientColorsFolder = textSettingsFolder.addFolder('Text Gradient Colors')
+
+const textColorConfig = {
+    color1: '#260d54',
+    color2: '#ffffff',
+    color3: '#8e66f9'
+}
+
+textGradientColorsFolder.addColor(textColorConfig, 'color1').onChange((value) => {
+    if (textShaderMaterial) {
+        textShaderMaterial.uniforms.textColor1.value.set(value)
+    }
+})
+
+textGradientColorsFolder.addColor(textColorConfig, 'color2').onChange((value) => {
+    if (textShaderMaterial) {
+        textShaderMaterial.uniforms.textColor2.value.set(value)
+    }
+})
+
+textGradientColorsFolder.addColor(textColorConfig, 'color3').onChange((value) => {
+    if (textShaderMaterial) {
+        textShaderMaterial.uniforms.textColor3.value.set(value)
+    }
+})
+
+// Initialize text controls visibility for default Liquid Gradient material
+updateTextControlsVisibility('Liquid Gradient')
 
 // Shader Colors folder
 const colorsFolder = gui.addFolder('Shader Colors')
@@ -675,6 +985,7 @@ colorsFolder.addColor(colorConfig, 'color4').onChange((value) => {
 colorsFolder.addColor(colorConfig, 'color5').onChange((value) => {
     backgroundShaderMaterial.uniforms.color5.value.set(value)
 })
+
 
 /**
  * Animate
@@ -715,6 +1026,14 @@ const tick = () =>
     // آپدیت uniform زمان
     backgroundShaderMaterial.uniforms.time.value = time;
     
+    // Update text shader time if using liquid gradient
+    if (textShaderMaterial && textMesh && textMesh.material === textShaderMaterial) {
+        textShaderMaterial.uniforms.time.value = time
+    }    
+    // Smooth text rotation around Y-axis (vertical)
+    if (textMesh) {
+        textMesh.rotation.y += 0.0008
+    }
     // چرخش ملایم کره (اختیاری)
     // backgroundMesh.rotation.y += 0.0005;
     // backgroundMesh.rotation.x += 0.0003;
