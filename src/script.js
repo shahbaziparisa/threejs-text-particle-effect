@@ -19,103 +19,6 @@ const scene = new THREE.Scene()
 /**
  * Gradient Background Shader
  */
-//no seam
-// const backgroundShaderMaterial = new THREE.ShaderMaterial({
-//     uniforms: {
-//         time: { value: 0.0 },
-//         colors: {
-//             value: [
-//                 new THREE.Vector3(0.5, 0.2, 0.8),  // بنفش
-//                 new THREE.Vector3(0.2, 0.8, 0.8),  // فیروزه‌ای
-//                 new THREE.Vector3(0.8, 0.3, 0.2),  // قرمز-نارنجی
-//                 new THREE.Vector3(0.3, 0.8, 0.3)   // سبز
-//             ]
-//         }
-//     },
-//     vertexShader: `
-//         varying vec3 vPosition;
-//         varying vec3 vNormal;
-        
-//         void main() {
-//             vPosition = position;
-//             vNormal = normalize(normal);
-//             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-//         }
-//     `,
-//     fragmentShader: `
-//         uniform float time;
-//         uniform vec3 colors[4];
-//         varying vec3 vPosition;
-//         varying vec3 vNormal;
-        
-//         // تابع نویز ساده ۳D
-//         float hash(float n) { return fract(sin(n) * 1e4); }
-//         float hash(vec3 p) { return hash(dot(p, vec3(127.1, 311.7, 74.7))); }
-        
-//         float noise3D(vec3 p) {
-//             vec3 i = floor(p);
-//             vec3 f = fract(p);
-//             f = f * f * (3.0 - 2.0 * f);
-            
-//             float n = i.x + i.y * 157.0 + 113.0 * i.z;
-//             return mix(
-//                 mix(mix(hash(n + 0.0), hash(n + 1.0), f.x),
-//                     mix(hash(n + 157.0), hash(n + 158.0), f.x), f.y),
-//                 mix(mix(hash(n + 113.0), hash(n + 114.0), f.x),
-//                     mix(hash(n + 270.0), hash(n + 271.0), f.x), f.y), f.z);
-//         }
-        
-//         float fbm3D(vec3 p) {
-//             float value = 0.0;
-//             float amplitude = 0.5;
-//             float frequency = 1.0;
-            
-//             for (int i = 0; i < 5; i++) {
-//                 value += amplitude * noise3D(p * frequency);
-//                 amplitude *= 0.5;
-//                 frequency *= 2.0;
-//             }
-            
-//             return value;
-//         }
-        
-//         void main() {
-//             vec3 pos = vPosition * 0.01; // Scale
-//             vec3 norm = normalize(vNormal);
-//             float t = time * 0.03;
-            
-//             // تولید الگو با نویز ۳D - بدون وابستگی به UV!
-//             float pattern = 0.0;
-            
-//             // لایه‌های مختلف با حرکت
-//             pattern += fbm3D(pos + vec3(t, 0.0, 0.0));
-//             pattern += fbm3D(pos * 1.5 + vec3(0.0, t * 0.7, 0.0)) * 0.7;
-//             pattern += fbm3D(pos * 2.0 + vec3(0.0, 0.0, t * 0.4)) * 0.5;
-            
-//             // نرمال‌سازی
-//             pattern = pattern * 0.5 + 0.5;
-            
-//             // ترکیب کاملاً نرم رنگ‌ها
-//             float posColor = pattern * 3.0; // 0-3
-            
-//             // توزیع گاوسی برای ترکیب نرم
-//             float w1 = exp(-pow(posColor, 2.0));
-//             float w2 = exp(-pow(posColor - 1.0, 2.0));
-//             float w3 = exp(-pow(posColor - 2.0, 2.0));
-//             float w4 = exp(-pow(posColor - 3.0, 2.0));
-            
-//             float total = w1 + w2 + w3 + w4;
-//             vec3 color = (colors[0] * w1 + colors[1] * w2 + 
-//                          colors[2] * w3 + colors[3] * w4) / total;
-            
-//             // کمی variation نرم
-//             color *= 0.9 + 0.1 * sin(pattern * 10.0 + t * 2.0);
-            
-//             gl_FragColor = vec4(color, 1.0);
-//         }
-//     `,
-//     side: THREE.BackSide
-// });
 
 const backgroundShaderMaterial = new THREE.ShaderMaterial({
     uniforms: {
@@ -641,13 +544,30 @@ const animatedObjects = []
  */
 function createRandomGeometry() {
     const geometries = [
+        // OctahedronGeometry variations
         new THREE.OctahedronGeometry(0.2, 0),
         new THREE.OctahedronGeometry(0.3, 0),
-        new THREE.OctahedronGeometry(0.2, 0),
-        new THREE.OctahedronGeometry(0.1, 0),
-        new THREE.OctahedronGeometry(0.3, 1),
-        new THREE.OctahedronGeometry(0.3, 1),
-        new THREE.OctahedronGeometry(0.3, 1)
+        new THREE.OctahedronGeometry(0.25, 0),
+        
+        // ConeGeometry variations
+        new THREE.ConeGeometry(0.25, 0.5, 32),
+        new THREE.ConeGeometry(0.3, 0.6, 16),
+        
+        // DodecahedronGeometry variations
+        new THREE.DodecahedronGeometry(0.25, 0),
+        new THREE.DodecahedronGeometry(0.3, 0),
+        
+        // IcosahedronGeometry variations
+        new THREE.IcosahedronGeometry(0.25, 3),
+        new THREE.IcosahedronGeometry(0.3, 2),
+        
+        // TorusGeometry variations
+        new THREE.TorusGeometry(0.3, 0.1, 16, 32),
+        new THREE.TorusGeometry(0.25, 0.08, 12, 24),
+        
+        // TorusKnotGeometry variations
+        new THREE.TorusKnotGeometry(0.25, 0.08, 64, 8),
+        new THREE.TorusKnotGeometry(0.2, 0.06, 64, 8)
     ]
 
     const randomGeometry = geometries[Math.floor(Math.random() * geometries.length)]
