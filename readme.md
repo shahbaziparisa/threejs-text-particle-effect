@@ -1,5 +1,7 @@
 # Three.js Text Particle Effect
 
+## 🌐 [Live Demo](https://3dtext-shader.parisashahbazi.com/)
+
 ![Preview](assets/preview.png)
 
 An interactive 3D visualization built with **Three.js** featuring animated text, dynamic particles, diverse rotating geometries, and a customizable gradient background shader.
