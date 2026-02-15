@@ -724,20 +724,31 @@ fontLoader.load(
         {
             // Get random particle texture
             const randomTexture = getRandomParticleTexture()
-            
+
             // Create sprite with random texture
-            const particleMaterial = new THREE.SpriteMaterial({ 
+            const particleMaterial = new THREE.SpriteMaterial({
                 map: randomTexture,
                 transparent: true,
                 sizeAttenuation: true
             })
             const sprite = new THREE.Sprite(particleMaterial)
             sprite.scale.set(1.5, 1.5, 1)
-            
+
             // Random positions
             sprite.position.x = (Math.random() - 0.5) * particleConfig.spread
             sprite.position.y = (Math.random() - 0.5) * particleConfig.spread
             sprite.position.z = (Math.random() - 0.5) * particleConfig.spread
+
+            // Animation data for particles
+            sprite.userData = {
+                originalPosition: sprite.position.clone(),
+                originalScale: 1.5,
+                animationType: Math.random() > 0.5 ? 'bobbing' : 'pulsing', // 1: bobbing, 2: pulsing
+                speed: Math.random() * 0.5 + 0.3,
+                phaseOffset: Math.random() * Math.PI * 2,
+                bobbingAmount: Math.random() * 1.5 + 0.5,
+                pulsingIntensity: Math.random() * 0.4 + 0.2
+            }
 
             scene.add(sprite)
             particles.push(sprite)
@@ -1019,6 +1030,28 @@ function animateObjects(elapsedTime) {
         obj.rotation.z += rotationSpeed * 0.03
     })
 }
+
+/**
+ * Animation function for particles
+ */
+function animateParticles(elapsedTime) {
+    particles.forEach((particle) => {
+        const { originalPosition, originalScale, animationType, speed, phaseOffset, bobbingAmount, pulsingIntensity } = particle.userData
+
+        if (animationType === 'bobbing') {
+            // Animation 1: Floating/Bobbing motion - vertical movement
+            particle.position.copy(originalPosition)
+            particle.position.y += Math.sin(elapsedTime * speed + phaseOffset) * bobbingAmount
+            particle.position.x += Math.cos(elapsedTime * speed * 0.7 + phaseOffset) * bobbingAmount * 0.3
+            particle.position.z += Math.sin(elapsedTime * speed * 0.5 + phaseOffset) * bobbingAmount * 0.2
+        } else if (animationType === 'pulsing') {
+            // Animation 2: Pulsing scale - grow and shrink
+            particle.position.copy(originalPosition)
+            const pulseScale = 1 + Math.sin(elapsedTime * speed + phaseOffset) * pulsingIntensity
+            particle.scale.set(originalScale * pulseScale, originalScale * pulseScale, 1)
+        }
+    })
+}
 let time = 0;
 const tick = () =>
 {
@@ -1068,6 +1101,9 @@ const tick = () =>
 
     // Animate moving objects
     animateObjects(elapsedTime)
+
+    // Animate particles
+    animateParticles(elapsedTime)
 
     // Apply mouse-based camera rotation
     if (!controls.autoRotate) {
