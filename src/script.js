@@ -125,7 +125,7 @@ const backgroundShaderMaterial = new THREE.ShaderMaterial({
         color2: { value: new THREE.Color(0x3282B8) }, 
         color3: { value: new THREE.Color(0x45B7D1) }, 
         color4: { value: new THREE.Color(0x139efb) }, 
-        color5: { value: new THREE.Color(0xFFD166) }  
+        color5: { value: new THREE.Color(0xFFFffDB) }  
     },
     vertexShader: `
         varying vec3 vPosition;
@@ -558,7 +558,7 @@ backgroundMaterials['Matcap'] = backgroundMatcapMaterial
 /**
  * Particle Textures
  */
-const particleTextures = ['flame_04.png', 'flare_01.png', 'trace_01.png']  // Particle texture names
+const particleTextures = ['star_05.png', 'flare_01.png', 'star_05.png']  // Particle texture names
 const loadedParticleTextures = {}
 
 // Load particle textures with transparency
@@ -641,17 +641,21 @@ const animatedObjects = []
  */
 function createRandomGeometry() {
     const geometries = [
-        new THREE.TorusGeometry(0.3, 0.1, 16, 32),
-        new THREE.TorusGeometry(0.5, 0.15, 16, 32),
-        new THREE.IcosahedronGeometry(0.25, 4),
+        new THREE.OctahedronGeometry(0.2, 0),
         new THREE.OctahedronGeometry(0.3, 0),
-        new THREE.TetrahedronGeometry(0.35, 0),
-        new THREE.BoxGeometry(0.3, 0.3, 0.3),
-        new THREE.BoxGeometry(0.5, 0.5, 0.5)
+        new THREE.OctahedronGeometry(0.2, 0),
+        new THREE.OctahedronGeometry(0.1, 0),
+        new THREE.OctahedronGeometry(0.3, 1),
+        new THREE.OctahedronGeometry(0.3, 1),
+        new THREE.OctahedronGeometry(0.3, 1)
     ]
 
     const randomGeometry = geometries[Math.floor(Math.random() * geometries.length)]
-    const material = new THREE.MeshMatcapMaterial({ matcap: matcapTexture })
+    const material = new THREE.MeshMatcapMaterial({
+        matcap: matcapTexture,
+        transparent: true,
+        opacity: 0.6
+    })
 
     const mesh = new THREE.Mesh(randomGeometry, material)
     mesh.position.x = (Math.random() - 0.5) * 35
@@ -676,7 +680,7 @@ function createRandomGeometry() {
 }
 
 // Create random geometry objects
-for (let i = 0; i < 30; i++) {
+for (let i = 0; i < 50; i++) {
     createRandomGeometry()
 }
 
@@ -778,7 +782,7 @@ const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
 controls.dampingFactor = 0.05
 controls.autoRotate = false
-controls.autoRotateSpeed = 0.5
+controls.autoRotateSpeed = 0.1
 controls.enableZoom = true
 controls.enablePan = false
 controls.maxDistance = 15
@@ -834,7 +838,7 @@ const geometryFolder = gui.addFolder('Geometry')
 geometryFolder.add({ regenerate: () => {
     animatedObjects.forEach(obj => scene.remove(obj))
     animatedObjects.length = 0
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 50; i++) {
         createRandomGeometry()
     }
 }}, 'regenerate')
@@ -1040,6 +1044,19 @@ const tick = () =>
     // Update shader uniforms
     // backgroundShaderMaterial.uniforms.time.value = elapsedTime
     // bgMaterial.uniforms.time.value = elapsedTime
+
+    // Smooth orbital movement in animation tick
+    if (!isUserInteracting) {
+        const orbitSpeed = 0.0002
+        controls.autoRotate = true
+        controls.autoRotateSpeed = 0.2
+
+        // Smooth vertical oscillation
+        const verticalOscillation = Math.sin(time * 0.2) * 0.3
+        controls.target.y = verticalOscillation
+    } else {
+        controls.autoRotate = false
+    }
 
     // Auto-rotation after idle period
     if (!isUserInteracting) {
